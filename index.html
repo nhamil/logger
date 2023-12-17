@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='UTF-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+
+        <link rel="stylesheet" href="style.css">
+
+        <title>Logger</title>
+    </head>
+    <body>
+        <div class="content">
+            <input type="file" id="load-config" style="display: none" />
+            <a id="download-form" style="display: none;"></a>
+
+            <button onclick="document.getElementById('load-config').click()">Import Config</button>
+            <button onclick="clearData()">Clear Config</button>
+
+            <div id="items"></div>
+        </div>
+
+        <script src="logger.js"></script>
+    </body>
+</html>
