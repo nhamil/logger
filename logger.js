@@ -373,7 +373,7 @@ function rebuildFromConfig(config) {
 document.addEventListener('keypress', function(event) {
     if (event.key === "Enter" && event.target.tagName.toLowerCase() === "input") {
         let found = false; 
-        for (const elem of document.getElementsByTagName('input')) {
+        for (const elem of document.querySelectorAll('input,textarea,button')) {
             if (elem == event.target) {
                 found = true; 
             }
