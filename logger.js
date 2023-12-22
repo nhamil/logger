@@ -1,5 +1,6 @@
-const VERSION = "0.0.1"; 
+const VERSION = 2; 
 let formTitle = "Untitled Form"; 
+let formVersion = ""; 
 const items = document.getElementById('items'); 
 const entryGetters = {}; 
 
@@ -18,64 +19,88 @@ function clearData() {
 
 function loadDefault() {
     rebuildFromConfig({
-        "title": "Sample Log", 
-        "items": {
-            "Date": {
-                "type": "date", 
-                "icon": "🗓️"
-            }, 
-            "Wake Time": {
-                "type": "time", 
-                "icon": "⏰"
-            },
-            "Sleep Time": {
-                "type": "time", 
-                "icon": "💤"
-            },
-            "Weight (lb)": {
-                "type": "number", 
-                "icon": "⚖️"
-            }, 
-            "Exercise": {
-                "type": "option", 
-                "icon": "🏋️", 
-                "values": [
-                    "None", 
-                    "Some", 
-                    "A lot"
-                ]
-            }, 
-            "Activities": {
-                "type": "checkbox", 
-                "icon": "🔨", 
-                "values": [
-                    "Clean", 
-                    "Groceries", 
-                    "Hobbies", 
-                    "Work"
-                ]
-            }, 
-            "Something Bad": {
-                "type": "text", 
-                "icon": "👎"
-            }, 
-            "Something Good": {
-                "type": "text", 
-                "icon": "👍"
-            }, 
-            "Summary": {
-                "type": "multiline", 
-                "icon": "📓"
-            }
+    "title": "Basic Log", 
+    "items": {
+        "Date": {
+            "type": "date", 
+            "icon": "🗓️"
+        },
+        "Wake Time": {
+            "type": "time", 
+            "icon": "⏰"
+        },
+        "Sleep Time": {
+            "type": "time", 
+            "icon": "💤"
+        },
+        "Weight (lb)": {
+            "type": "number", 
+            "icon": "⚖️"
+        },
+        "Mood (0-10)": {
+            "type": "range", 
+            "icon": "🙂", 
+            "range": [0, 10] 
+        },
+        "Exercise": {
+            "type": "list", 
+            "icon": "🏋️"
+        },
+        "Activities": {
+            "type": "checkbox", 
+            "icon": "🔨", 
+            "values": [
+                "Clean", 
+                "Groceries", 
+                "Hobbies", 
+                "Work"
+            ]
+        }, 
+        "Activities (Other)": {
+            "type": "list", 
+            "append": true
+        }, 
+        "Breakfast": {
+            "type": "list", 
+            "icon": "🥞"
+        }, 
+        "Lunch": {
+            "type": "list", 
+            "icon": "🥪"
+        }, 
+        "Dinner": {
+            "type": "list", 
+            "icon": "🍝"
+        }, 
+        "Snacks": {
+            "type": "list", 
+            "icon": "🍪"
+        },
+        "Something Bad": {
+            "type": "text", 
+            "icon": "👎"
+        }, 
+        "Something Good": {
+            "type": "text", 
+            "icon": "👍"
+        }, 
+        "Summary": {
+            "type": "paragraph", 
+            "icon": "📓"
         }
-    }); 
+    }
+}); 
 }
 
-function addTitle(label) {
+function addTitle(label, version) {
     const title = document.createElement('h1'); 
     formTitle = label; 
+    formVersion = version; 
     title.classList.add('form-title'); 
     title.textContent = label; 
+    if (version) {
+        title.textContent += " " + version; 
+    }
     items.appendChild(title); 
 }
 
@@ -92,6 +117,7 @@ function addSubmit() {
         const json = JSON.stringify({
             "version": VERSION, 
             "form": formTitle, 
+            "formVersion": formVersion, 
             "data": out
         }, null, 2); 
 
@@ -109,19 +135,23 @@ function addSubmit() {
     items.appendChild(button); 
 }
 
-function getAndAddWrapper(label, data) {
+function getAndAddGroup() {
     const elem = document.createElement('div'); 
     elem.classList.add('item'); 
     items.appendChild(elem); 
 
+    return elem; 
+}
+
+function createLabel(label, icon) {
     const div = document.createElement('div'); 
     div.classList.add('item-top'); 
 
-    if (data.icon) {
-        const icon = document.createElement('label'); 
-        icon.classList.add('item-icon'); 
-        icon.textContent = data.icon; 
-        div.appendChild(icon); 
+    if (icon) {
+        const iconElem = document.createElement('label'); 
+        iconElem.classList.add('item-icon'); 
+        iconElem.textContent = icon; 
+        div.appendChild(iconElem); 
     }
 
     const title = document.createElement('label'); 
@@ -129,44 +159,97 @@ function getAndAddWrapper(label, data) {
     title.textContent = label; 
     div.appendChild(title); 
 
-    elem.appendChild(div); 
-    return elem; 
+    return [div, title]; 
 }
 
 const addInputTypes = {
-    text: function(label, data) {
+    text: function() {
         const input = document.createElement('input'); 
         input.type = 'text'; 
         input.autocomplete = 'off'; 
         input.autocapitalize = 'sentences'; 
         return [input, () => input.value];   
     }, 
-    number: function(label, data) {
+    number: function() {
         const input = document.createElement('input'); 
         input.type = 'number'; 
         input.autocomplete = 'off'; 
-        return [input, () => input.value];   
+        return [input, () => parseFloat(input.value)];   
     }, 
-    date: function(label, data) {
+    date: function() {
         const input = document.createElement('input'); 
         input.type = 'date'; 
         input.autocomplete = 'off'; 
         return [input, () => input.value];   
     }, 
-    time: function(label, data) {
+    time: function() {
         const input = document.createElement('input'); 
         input.type = 'time'; 
         input.autocomplete = 'off'; 
         return [input, () => input.value];   
     }, 
-    multiline: function(label, data) {
+    list: function() {
+        const div = document.createElement('div'); 
+        div.classList.add('multiitem'); 
+        const inputs = []; 
+
+        function createLine(parent) {
+            const input = document.createElement('input'); 
+            input.type = 'text'; 
+            input.autocomplete = 'off'; 
+            input.autocapitalize = 'sentences'; 
+
+            input.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') return; 
+
+                if (inputs[inputs.length - 1] === input) {
+                    createLine(); 
+                }
+            }); 
+            input.addEventListener('input', function(event) {
+                if (inputs[inputs.length - 1] === input) {
+                    createLine(); 
+                }
+            }); 
+            input.addEventListener('paste', function(event) {
+                let cur = input; 
+                for (const line of event.clipboardData.getData('text').split('\n')) {
+                    cur.value += line; 
+                    cur = createLine(cur); 
+                    cur.focus(); 
+                }
+                event.preventDefault(); 
+            }); 
+            input.addEventListener('focusout', function() {
+                if (inputs[inputs.length - 1] !== input && input.value == "") {
+                    inputs.splice(inputs.indexOf(input), 1); 
+                    div.removeChild(input); 
+                }
+            }); 
+
+            inputs.push(input); 
+            if (parent) {
+                div.insertBefore(input, parent.nextSibling); 
+            } 
+            else {
+                div.appendChild(input); 
+            }
+
+            return input; 
+        }
+
+        createLine(); 
+
+        return [div, () => inputs.filter(e => e.value != "").map(e => e.value)];   
+    }, 
+    paragraph: function() {
         const input = document.createElement('textarea'); 
         input.type = 'text'; 
         input.autocapitalize = 'sentences'; 
         input.autocomplete = 'off'; 
         return [input, () => input.value];   
     }, 
-    range: function(label, data) {
+    range: function(data, label, labelElem) {
         const input = document.createElement('input'); 
         input.type = 'range'; 
         
@@ -179,15 +262,17 @@ const addInputTypes = {
 
         function update() {
             valueSet = true; 
-            input.parentElement.getElementsByClassName('item-label').item(0).textContent = label + ": " + input.value
+            labelElem.textContent = label + ": " + input.value
         }
 
         input.addEventListener('input', update);
         input.addEventListener('mousedown', update);
 
-        return [input, () => valueSet ? input.value : ""];  
+        update(); 
+
+        return [input, () => valueSet ? parseFloat(input.value) : null];  
     }, 
-    checkbox: function(label, data) {
+    checkbox: function(data) {
         const inputs = []; 
         const values = []; 
 
@@ -215,7 +300,7 @@ const addInputTypes = {
             return out; 
         }]; 
     }, 
-    option: function(label, data) {
+    option: function(data) {
         const input = document.createElement('select'); 
 
         for (const value of ["(no answer)", ...data.values]) {
@@ -231,28 +316,44 @@ const addInputTypes = {
 
 function rebuildFromConfig(config) {
     clearItems(); 
-    addTitle(config.title); 
+    addTitle(config.title, config.version); 
 
     const badItems = []; 
+
+    let lastGroup = null; 
 
     for (const label in config.items) {
         const data = config.items[label]; 
         if (data.disabled) continue; 
 
+        const groupElem = data.append ? lastGroup : getAndAddGroup(); 
+        lastGroup = groupElem; 
+        let added = false; 
+
         const type = data.type; 
         
         if (addInputTypes[type]) {
-            const [inputs, getter] = addInputTypes[type](label, data); 
+            if (!data.append) {
+                if (added) {
+                    const space = document.createElement('div'); 
+                    space.classList.add('spacing'); 
+                    groupElem.appendChild(space); 
+                }
+                added = true; 
+            }
 
-            const wrapper = getAndAddWrapper(label, data); 
+            const [titleElem, labelElem] = createLabel(label, data.icon); 
+            if (!data.append) groupElem.appendChild(titleElem); 
+
+            const [inputs, getter] = addInputTypes[type](data, label, labelElem); 
 
             if (Array.isArray(inputs)) {
                 for (const input of inputs) {
-                    wrapper.appendChild(input); 
+                    groupElem.appendChild(input); 
                 }
             }
             else {
-                wrapper.appendChild(inputs); 
+                groupElem.appendChild(inputs); 
             }
 
             entryGetters[label] = getter; 
@@ -268,6 +369,21 @@ function rebuildFromConfig(config) {
         alert("The following items are not supported: " + JSON.stringify(badItems)); 
     }
 }
+
+document.addEventListener('keypress', function(event) {
+    if (event.key === "Enter" && event.target.tagName.toLowerCase() === "input") {
+        let found = false; 
+        for (const elem of document.getElementsByTagName('input')) {
+            if (elem == event.target) {
+                found = true; 
+            }
+            else if (found) {
+                elem.focus(); 
+                break; 
+            }
+        }
+    }
+}, true);
 
 document.getElementById('load-config').addEventListener('change', function() {
     /** @type {FileList} */

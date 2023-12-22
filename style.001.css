@@ -36,6 +36,14 @@ body {
     flex-direction: column;
 }
 
+.multiitem {
+    padding: 0; 
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px; 
+}
+
 .item > * {
     box-sizing: border-box;
     margin: 16px;
@@ -44,6 +52,11 @@ body {
 
 .item-icon {
     margin-right: 0.5em; 
+}
+
+.prefix {
+    display: inline-block;
+    width: 6em; 
 }
 
 input {
@@ -86,6 +99,10 @@ button {
     }
 
     .item-top {
-        margin-bottom: 1em; 
+        margin-bottom: 0.0em; 
+    }
+
+    .spacing {
+        margin-bottom: 1em;
     }
 }
