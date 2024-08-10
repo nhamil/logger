@@ -3,93 +3,31 @@ let formTitle = "Untitled Form";
 let formVersion = ""; 
 const items = document.getElementById('items'); 
 const entryGetters = {}; 
+const entrySetters = {}; 
 
 function clearItems() {
     items.textContent = ''; 
     for (const key in entryGetters) {
         delete entryGetters[key]; 
     }
+    for (const key in entrySetters) {
+        delete entrySetters[key]; 
+    }
+}
+
+function clearUserData() {
+    if (confirm("Are you sure you want to clear all form input?")) {
+        localStorage.removeItem('current'); 
+        rebuildForm(); 
+    }
 }
 
 function clearData() {
-    clearItems(); 
-    localStorage.removeItem('data'); 
-    loadDefault(); 
-}
-
-function loadDefault() {
-    rebuildFromConfig({
-    "title": "Basic Log", 
-    "items": {
-        "Date": {
-            "type": "date", 
-            "icon": "🗓️"
-        },
-        "Wake Time": {
-            "type": "time", 
-            "icon": "⏰"
-        },
-        "Sleep Time": {
-            "type": "time", 
-            "icon": "💤"
-        },
-        "Weight (lb)": {
-            "type": "number", 
-            "icon": "⚖️"
-        },
-        "Mood (0-10)": {
-            "type": "range", 
-            "icon": "🙂", 
-            "range": [0, 10] 
-        },
-        "Exercise": {
-            "type": "list", 
-            "icon": "🏋️"
-        },
-        "Activities": {
-            "type": "checkbox", 
-            "icon": "🔨", 
-            "values": [
-                "Clean", 
-                "Groceries", 
-                "Hobbies", 
-                "Work"
-            ]
-        }, 
-        "Activities (Other)": {
-            "type": "list", 
-            "append": true
-        }, 
-        "Breakfast": {
-            "type": "list", 
-            "icon": "🥞"
-        }, 
-        "Lunch": {
-            "type": "list", 
-            "icon": "🥪"
-        }, 
-        "Dinner": {
-            "type": "list", 
-            "icon": "🍝"
-        }, 
-        "Snacks": {
-            "type": "list", 
-            "icon": "🍪"
-        },
-        "Something Bad": {
-            "type": "text", 
-            "icon": "👎"
-        }, 
-        "Something Good": {
-            "type": "text", 
-            "icon": "👍"
-        }, 
-        "Summary": {
-            "type": "paragraph", 
-            "icon": "📓"
-        }
+    if (confirm("Are you sure you want to reset the form configuration?")) {
+        clearItems(); 
+        localStorage.removeItem('data'); 
+        rebuildForm(); 
     }
-}); 
 }
 
 function addTitle(label, version) {
@@ -104,22 +42,29 @@ function addTitle(label, version) {
     items.appendChild(title); 
 }
 
+function stringifyFormData() 
+{
+    const out = {}; 
+
+    for (const key in entryGetters) {
+        out[key] = entryGetters[key](); 
+    }
+
+    const json = JSON.stringify({
+        "version": VERSION, 
+        "form": formTitle, 
+        "formVersion": formVersion, 
+        "data": out
+    }, null, 2); 
+
+    return json; 
+}
+
 function addSubmit() {
     const button = document.createElement('button'); 
     button.textContent = "Submit"; 
     button.addEventListener('click', function() {
-        const out = {}; 
-
-        for (const key in entryGetters) {
-            out[key] = entryGetters[key](); 
-        }
-
-        const json = JSON.stringify({
-            "version": VERSION, 
-            "form": formTitle, 
-            "formVersion": formVersion, 
-            "data": out
-        }, null, 2); 
+        const json = stringifyFormData(); 
 
         const elem = document.getElementById('download-form'); 
         elem.setAttribute('href', URL.createObjectURL(
@@ -168,25 +113,25 @@ const addInputTypes = {
         input.type = 'text'; 
         input.autocomplete = 'off'; 
         input.autocapitalize = 'sentences'; 
-        return [input, () => input.value];   
+        return [input, () => input.value, value => input.value = value];   
     }, 
     number: function() {
         const input = document.createElement('input'); 
         input.type = 'number'; 
         input.autocomplete = 'off'; 
-        return [input, () => parseFloat(input.value)];   
+        return [input, () => parseFloat(input.value), value => input.value = value];   
     }, 
     date: function() {
         const input = document.createElement('input'); 
         input.type = 'date'; 
         input.autocomplete = 'off'; 
-        return [input, () => input.value];   
+        return [input, () => input.value, value => input.value = value];   
     }, 
     time: function() {
         const input = document.createElement('input'); 
         input.type = 'time'; 
         input.autocomplete = 'off'; 
-        return [input, () => input.value];   
+        return [input, () => input.value, value => input.value = value];   
     }, 
     list: function() {
         const div = document.createElement('div'); 
@@ -240,14 +185,24 @@ const addInputTypes = {
 
         createLine(); 
 
-        return [div, () => inputs.filter(e => e.value != "").map(e => e.value)];   
+        return [
+            div, 
+            () => inputs.filter(e => e.value != "").map(e => e.value), 
+            values => {
+                for (let value of values) {
+                    const lastLine = inputs[inputs.length - 1]; 
+                    lastLine.value = value; 
+                    createLine(lastLine); 
+                }
+            }
+        ];   
     }, 
     paragraph: function() {
         const input = document.createElement('textarea'); 
         input.type = 'text'; 
         input.autocapitalize = 'sentences'; 
         input.autocomplete = 'off'; 
-        return [input, () => input.value];   
+        return [input, () => input.value, value => input.value = value];   
     }, 
     range: function(data, label, labelElem) {
         const input = document.createElement('input'); 
@@ -270,7 +225,16 @@ const addInputTypes = {
 
         update(); 
 
-        return [input, () => valueSet ? parseFloat(input.value) : null];  
+        return [
+            input, 
+            () => valueSet ? parseFloat(input.value) : null, 
+            value => {
+                if (value != null) {
+                    input.value = value; 
+                    update(); 
+                }
+            }
+        ];  
     }, 
     checkbox: function(data) {
         const inputs = []; 
@@ -292,25 +256,25 @@ const addInputTypes = {
             inputs.push(div); 
         }
 
-        return [inputs, () => {
-            const out = []; 
-            values.forEach(([valueLabel, valueFn]) => {
-                if (valueFn()) out.push(valueLabel); 
-            });
-            return out; 
-        }]; 
-    }, 
-    option: function(data) {
-        const input = document.createElement('select'); 
-
-        for (const value of ["(no answer)", ...data.values]) {
-            const text = document.createElement('option'); 
-            text.value = value; 
-            text.textContent = value; 
-            input.appendChild(text); 
-        }
-
-        return [input, () => input.value === "(no answer)" ? "" : input.value]; 
+        return [
+            inputs, 
+            () => {
+                const out = []; 
+                values.forEach(([valueLabel, valueFn]) => {
+                    if (valueFn()) out.push(valueLabel); 
+                });
+                return out; 
+            }, 
+            values => {
+                for (let value of values) {
+                    for (let checkboxIndex in data.values) {
+                        if (value == data.values[checkboxIndex]) {
+                            inputs[checkboxIndex].children[0].checked = true; 
+                        }
+                    }
+                }
+            }
+        ]; 
     }
 };
 
@@ -345,7 +309,7 @@ function rebuildFromConfig(config) {
             const [titleElem, labelElem] = createLabel(label, data.icon); 
             if (!data.append) groupElem.appendChild(titleElem); 
 
-            const [inputs, getter] = addInputTypes[type](data, label, labelElem); 
+            const [inputs, getter, setter] = addInputTypes[type](data, label, labelElem); 
 
             if (Array.isArray(inputs)) {
                 for (const input of inputs) {
@@ -357,6 +321,7 @@ function rebuildFromConfig(config) {
             }
 
             entryGetters[label] = getter; 
+            entrySetters[label] = setter; 
         }
         else {
             badItems.push(type); 
@@ -368,6 +333,36 @@ function rebuildFromConfig(config) {
     if (badItems.length) {
         alert("The following items are not supported: " + JSON.stringify(badItems)); 
     }
+}
+
+function fillOutForm(data) {
+    if (!data) return; 
+
+    if (data['form'] != formTitle || data['formVersion'] != formVersion) {
+        console.log("Current user data does not match the form config: " + data['form'] + " vs " + formTitle + ", " + data['formVersion'] + " vs " + formVersion); 
+        return; 
+    }
+
+    for (let item in data['data']) 
+    {
+        entrySetters[item](data['data'][item]); 
+    }
+}
+
+function rebuildForm() {
+    try {
+        rebuildFromConfig(JSON.parse(localStorage.getItem('data'))); 
+    }
+    catch (e) {
+        loadDefault(); 
+    }
+
+    try {
+        fillOutForm(JSON.parse(localStorage.getItem('current'))); 
+    }
+    catch (e) {
+        console.log("Could not fill out form data: " + e); 
+    } 
 }
 
 document.addEventListener('keypress', function(event) {
@@ -384,6 +379,10 @@ document.addEventListener('keypress', function(event) {
         }
     }
 }, true);
+
+document.addEventListener('input', function(event) {
+    localStorage.setItem('current', stringifyFormData()); 
+});
 
 document.getElementById('load-config').addEventListener('change', function() {
     /** @type {FileList} */
@@ -414,9 +413,80 @@ document.getElementById('load-config').addEventListener('change', function() {
     reader.readAsText(file); 
 });
 
-try {
-    rebuildFromConfig(JSON.parse(localStorage.getItem('data'))); 
-}
-catch (e) {
-    loadDefault(); 
+rebuildForm(); 
+
+function loadDefault() {
+    rebuildFromConfig({
+        "title": "Basic Log", 
+        "version": "v1", 
+        "items": {
+            "Date": {
+                "type": "date", 
+                "icon": "🗓️"
+            },
+            "Wake Time": {
+                "type": "time", 
+                "icon": "⏰"
+            },
+            "Sleep Time": {
+                "type": "time", 
+                "icon": "💤"
+            },
+            "Weight (lb)": {
+                "type": "number", 
+                "icon": "⚖️"
+            },
+            "Mood (0-10)": {
+                "type": "range", 
+                "icon": "🙂", 
+                "range": [0, 10] 
+            },
+            "Exercise": {
+                "type": "list", 
+                "icon": "🏋️"
+            },
+            "Activities": {
+                "type": "checkbox", 
+                "icon": "🔨", 
+                "values": [
+                    "Clean", 
+                    "Groceries", 
+                    "Hobbies", 
+                    "Work"
+                ]
+            }, 
+            "Activities (Other)": {
+                "type": "list", 
+                "append": true
+            }, 
+            "Breakfast": {
+                "type": "list", 
+                "icon": "🥞"
+            }, 
+            "Lunch": {
+                "type": "list", 
+                "icon": "🥪"
+            }, 
+            "Dinner": {
+                "type": "list", 
+                "icon": "🍝"
+            }, 
+            "Snacks": {
+                "type": "list", 
+                "icon": "🍪"
+            },
+            "Something Bad": {
+                "type": "text", 
+                "icon": "👎"
+            }, 
+            "Something Good": {
+                "type": "text", 
+                "icon": "👍"
+            }, 
+            "Summary": {
+                "type": "paragraph", 
+                "icon": "📓"
+            }
+        }
+    }); 
 }
