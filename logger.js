@@ -197,12 +197,20 @@ const addInputTypes = {
             }
         ];   
     }, 
-    paragraph: function() {
+    paragraph: function(data) {
         const input = document.createElement('textarea'); 
         input.type = 'text'; 
+        input.rows = data.rows || 6; 
         input.autocapitalize = 'sentences'; 
         input.autocomplete = 'off'; 
-        return [input, () => input.value, value => input.value = value];   
+        return [
+            input, 
+            () => input.value.replace('\r', '').split('\n'), 
+            value => {
+                input.value = (value || []).join('\n'); 
+                input.scrollTop = input.scrollHeight; 
+            }
+        ];   
     }, 
     range: function(data, label, labelElem) {
         const input = document.createElement('input'); 

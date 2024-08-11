@@ -71,7 +71,6 @@ input[type=checkbox], input[type=radio] {
 }
 
 textarea {
-    height: 6em;
     font-family: 'Source Sans Pro', 'Open Sans', sans-serif;  
     font-size: 1.0em;
     resize: vertical;
